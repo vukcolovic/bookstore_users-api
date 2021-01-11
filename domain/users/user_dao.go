@@ -4,6 +4,7 @@ import (
 	"UdemyApp/bookstore_users-api/datasources/postgresql/users_db"
 	"UdemyApp/bookstore_users-api/logger"
 	"UdemyApp/bookstore_users-api/utils/errors"
+	"database/sql"
 	"fmt"
 )
 
@@ -12,7 +13,8 @@ const (
 	queryGetUserById = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE id = $1;"
 	queryUpdateUser = "UPDATE users SET first_name = $1, last_name = $2, email = $3 WHERE id = $4;"
 	queryDeleteUser = "DELETE FROM users WHERE id = $1;"
-	queryFindUserByStatus = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE status = $1;"
+	queryFindByStatus = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE status = $1;"
+	queryFindByEmailPasswordAndStatus = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE email = $1 AND Password = $2 AND Status = $3;"
 	errorNoRows = "no rows in result set"
 
 )
@@ -87,7 +89,7 @@ func (user *User) Delete() *errors.RestErr {
 }
 
 func (user *User) FindByStatus(status string) ([]User, *errors.RestErr) {
-	stmt, err := users_db.Client.Prepare(queryFindUserByStatus)
+	stmt, err := users_db.Client.Prepare(queryFindByStatus)
 	if err != nil {
 		logger.Error("error when trying to prepare find user statment", err)
 		return nil, errors.NewInternalServerError("database error")
@@ -116,4 +118,24 @@ func (user *User) FindByStatus(status string) ([]User, *errors.RestErr) {
 		return nil, errors.NewNotFoundError(fmt.Sprintf("no users matching status %s", status))
 	}
 	return result, nil
+}
+
+func (user *User) FindByEmailAndPassword()  *errors.RestErr {
+	stmt, err := users_db.Client.Prepare(queryFindByEmailPasswordAndStatus)
+	if err != nil {
+		logger.Error("error when trying to prepare get user by email and password statment", err)
+		return errors.NewInternalServerError("database error")
+	}
+	defer stmt.Close()
+
+	result := stmt.QueryRow(user.Email, user.Password, StatusActive)
+	if getErr := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); getErr != nil {
+		if getErr == sql.ErrNoRows {
+			return errors.NewNotFoundError("invalid user credentials")
+		}
+		logger.Error("error when trying to get user by email and password", getErr)
+		return errors.NewInternalServerError("database error")
+	}
+
+	return nil
 }
