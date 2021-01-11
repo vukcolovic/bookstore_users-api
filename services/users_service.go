@@ -4,7 +4,7 @@ import (
 	"UdemyApp/bookstore_users-api/domain/users"
 	"UdemyApp/bookstore_users-api/utils/crypto_utils"
 	"UdemyApp/bookstore_users-api/utils/date_utils"
-	"UdemyApp/bookstore_users-api/utils/errors"
+	"UdemyApp/bookstore_utils-go/rest_errors"
 )
 
 var(
@@ -16,17 +16,17 @@ type userService struct {
 }
 
 type usersServiceInterface interface {
-	GetUser(int64) (*users.User, *errors.RestErr)
-	CreateUser(users.User) (*users.User, *errors.RestErr)
-	UpdateUser(bool, users.User) (*users.User, *errors.RestErr)
-	DeleteUser(int64) *errors.RestErr
-	Search(string) (users.Users, *errors.RestErr)
-	LoginUser(users.LoginRequest) (*users.User, *errors.RestErr)
+	GetUser(int64) (*users.User, rest_errors.RestErr)
+	CreateUser(users.User) (*users.User, rest_errors.RestErr)
+	UpdateUser(bool, users.User) (*users.User, rest_errors.RestErr)
+	DeleteUser(int64) rest_errors.RestErr
+	Search(string) (users.Users, rest_errors.RestErr)
+	LoginUser(users.LoginRequest) (*users.User, rest_errors.RestErr)
 }
 
-func (s *userService) GetUser(userId int64) (*users.User, *errors.RestErr) {
+func (s *userService) GetUser(userId int64) (*users.User, rest_errors.RestErr) {
 	if userId <= 0 {
-		return nil, errors.NewBadRequestError("Invalid user id")
+		return nil, rest_errors.NewBadRequestError("Invalid user id")
 	}
 	result := &users.User{Id: userId}
 	if err := result.Get(); err != nil {
@@ -35,7 +35,7 @@ func (s *userService) GetUser(userId int64) (*users.User, *errors.RestErr) {
 	return result, nil
 }
 
-func (s *userService)  CreateUser(user users.User) (*users.User, *errors.RestErr) {
+func (s *userService)  CreateUser(user users.User) (*users.User, rest_errors.RestErr) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (s *userService)  CreateUser(user users.User) (*users.User, *errors.RestErr
 	return &user, nil
 }
 
-func (s *userService)  UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) {
+func (s *userService)  UpdateUser(isPartial bool, user users.User) (*users.User, rest_errors.RestErr) {
 	current := &users.User{Id: user.Id}
 	err := current.Get()
 	if err != nil {
@@ -85,17 +85,17 @@ func (s *userService)  UpdateUser(isPartial bool, user users.User) (*users.User,
 	return current, nil
 }
 
-func (s *userService)  DeleteUser(userId int64) *errors.RestErr {
+func (s *userService)  DeleteUser(userId int64) rest_errors.RestErr {
 	user := &users.User{Id: userId}
 	return user.Delete()
 }
 
-func (s *userService)  Search(status  string) (users.Users, *errors.RestErr) {
+func (s *userService)  Search(status  string) (users.Users, rest_errors.RestErr) {
 	dao := &users.User{}
 	return dao.FindByStatus(status)
 }
 
-func (s *userService) LoginUser(request users.LoginRequest) (*users.User, *errors.RestErr) {
+func (s *userService) LoginUser(request users.LoginRequest) (*users.User, rest_errors.RestErr) {
 	dao := &users.User{
 		Email: request.Email,
 		Password: crypto_utils.GetMd5(request.Password),
